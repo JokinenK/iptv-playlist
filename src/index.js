@@ -10,9 +10,9 @@ const {
   IPTV_EXTENSION = 'ts',
   PORT = '1234',
   FILENAME = 'channels.m3u8',
-} = process.env || {};
+} = process.env;
 
-async function process(_, res) {
+async function handler(_, res) {
   const baseUri = `${IPTV_PROTOCOL}://${IPTV_DOMAIN}:${IPTV_PORT}`
   const panelUri = `${baseUri}/panel_api.php?username=${IPTV_USERNAME}&password=${IPTV_PASSWORD}`
   const { available_channels } = await fetch(panelUri).then(result => result.json());
@@ -31,7 +31,7 @@ async function process(_, res) {
 function main() {
   const app = new express();
 
-  app.use(`/${FILENAME}`, process);
+  app.use(`/${FILENAME}`, handler);
   app.listen(PORT, () => {
     console.log(`Running on port ${PORT}`);
   })
