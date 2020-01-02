@@ -8,11 +8,15 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": "https://github.com/JokinenK/iptv-playlist",
-  "keywords": ["iptv", "m3u8"],
+  "keywords": [
+    "iptv",
+    "m3u8"
+  ],
   "author": "Kalle Jokinen",
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.1",
-    "node-fetch": "^2.6.0"
+    "node-fetch": "^2.6.0",
+    "request": "^2.88.0"
   }
 }
