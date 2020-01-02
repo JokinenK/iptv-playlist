@@ -1,6 +1,5 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const request = require('request');
 
 const {
   IPTV_DOMAIN,
@@ -11,7 +10,16 @@ const {
   PORT = '1234',
 } = process.env;
 
+const nameReplacements = [
+  { src: /^VIP/g, dst: '' },
+  { src: /SD/g, dst: '' },
+  { src: /FHD/g, dst: 'HD' },
+  { src: /\[[^\]]+\]/g, dst: ''},
+  { src: /YLE/g, dst: 'Yle' },
+];
+
 const baseUri = `${IPTV_PROTOCOL}://${IPTV_DOMAIN}:${IPTV_PORT}`;
+const logoRepo = 'https://github.com/zag2me/TheLogoDB/raw/master/Images';
 
 function channels(_, res) {
   const panelUri = `${baseUri}/panel_api.php?username=${IPTV_USERNAME}&password=${IPTV_PASSWORD}`;
@@ -20,19 +28,32 @@ function channels(_, res) {
     .then(({ available_channels }) => {
       res.write(`#EXTM3U\n`);
       for (const channel_id in available_channels) {
-        const { name, stream_icon, category_name, stream_type, stream_id, epg_channel_id, num } = available_channels[channel_id];
-    
-        res.write(`#EXTINF:0 channel-id="${num}" tvg-id="${epg_channel_id}" tvg-name="${name}" tvg-logo="${stream_icon}" channel-id="${name}" group-title="${category_name}|${stream_type}",${name}\n`);
-        res.write(`${baseUri}/${IPTV_USERNAME}/${IPTV_PASSWORD}/${stream_id}\n`);
+        const { name: rawName, category_name, stream_type, stream_id, epg_channel_id, num } = available_channels[channel_id];
+
+        let channelName = rawName;
+        nameReplacements.forEach((replacement) => {
+          channelName = channelName.replace(replacement.src, replacement.dst).trim();
+        })
+
+        const logoName = (channelName.split(": ")[1] || channelName).replace(/ /g, '_');
+        const logoUri = `${logoRepo}/${logoName}.png`;
+        const streamUri = `${baseUri}/${IPTV_USERNAME}/${IPTV_PASSWORD}/${stream_id}`
+   
+        res.write(`#EXTINF:0 channel-id="${num}" tvg-id="${epg_channel_id}" tvg-name="${channelName}" tvg-logo="${logoUri}" channel-id="${channelName}" group-title="${category_name}|${stream_type}",${channelName}\n`);
+        res.write(`${streamUri}\n`);
       }
     
       res.end();
-    });
+    })
+    .catch(err => console.log(err));
 }
 
-function xmltv(req, res) {
+function xmltv(_, res) {
   const xmltvUri = `${baseUri}/xmltv.php?username=${IPTV_USERNAME}&password=${IPTV_PASSWORD}`;
-  req.pipe(request(xmltvUri)).pipe(res);
+  fetch(xmltvUri)
+    .then(result => result.text())
+    .then(xml => res.send(xml.replace(/\<icon[^\/]+\/>/g, '')))
+    .catch(err => console.log(err));
 }
 
 function main() {
